@@ -1,9 +1,9 @@
 app:
-  title: Scaffolded Backstage App
+  title: Finaira Backstage App
   baseUrl: http://localhost:3000
 
 organization:
-  name: My Company
+  name: Finaira
 
 backend:
   # Used for enabling authentication, secret is shared by all backend plugins
@@ -28,8 +28,19 @@ backend:
   # This is for local development only, it is not recommended to use this in production
   # The production database configuration is stored in app-config.production.yaml
   database:
-    client: better-sqlite3
-    connection: ':memory:'
+    client: pg
+    connection:
+      host: 127.0.0.1
+      port: 5432
+      user: postgres
+      password: postgres
+    pool:
+      min: 2
+      max: 20
+      acquireTimeoutMillis: 120000
+      createTimeoutMillis: 120000
+      idleTimeoutMillis: 30000
+    acquireConnectionTimeout: 120000
   # workingDirectory: /tmp # Use this to configure a working directory for the scaffolder, defaults to the OS temp-dir
 
 integrations:
@@ -37,13 +48,15 @@ integrations:
     - host: github.com
       # This is a Personal Access Token or PAT from GitHub. You can find out how to generate this token, and more information
       # about setting up the GitHub integration here: https://backstage.io/docs/integrations/github/locations#configuration
-      token: ${GITHUB_TOKEN}
+      token: REDACTED_TOKEN
+      #  token: ${GITHUB_TOKEN}
     ### Example for how to add your GitHub Enterprise instance using the API:
     # - host: ghe.example.net
     #   apiBaseUrl: https://ghe.example.net/api/v3
     #   token: ${GHE_TOKEN}
 
 proxy:
+  {}
   ### Example for how to add a proxy endpoint for the frontend.
   ### A typical reason to do this is to handle HTTPS and CORS for internal services.
   # endpoints:
@@ -58,17 +71,26 @@ proxy:
 techdocs:
   builder: 'local' # Alternatives - 'external'
   generator:
-    runIn: 'docker' # Alternatives - 'local'
+    runIn: 'local' # Alternatives - 'docker'
   publisher:
     type: 'local' # Alternatives - 'googleGcs' or 'awsS3'. Read documentation for using alternatives.
 
 auth:
   # see https://backstage.io/docs/auth/ to learn about auth providers
+  environment: development
   providers:
     # See https://backstage.io/docs/auth/guest/provider
-    guest: {}
+    github:
+      development:
+        clientId: Ov23liJHUEZF1Q3AavU3
+        clientSecret: 95140e2f5df6fe6174205011fda6c0637a9ba9f3
+        signIn:
+          resolvers:
+            - resolver: usernameMatchingUserEntityName
+
 
 scaffolder:
+  {}
   # see https://backstage.io/docs/features/software-templates/configuration for software template options
 
 catalog:
@@ -81,6 +103,8 @@ catalog:
     # Local example data, file locations are relative to the backend process, typically `packages/backend`
     - type: file
       target: ../../examples/entities.yaml
+    - type: file
+      target: ../../examples/demo-app.yaml
 
     # Local example template
     - type: file
@@ -105,7 +129,25 @@ catalog:
     #     - allow: [User, Group]
 
 kubernetes:
-  # see https://backstage.io/docs/features/kubernetes/configuration for kubernetes configuration options
+  frontend:
+    podDelete:
+      enabled: true
+  serviceLocatorMethod:
+    type: 'multiTenant'
+  clusterLocatorMethods:
+    - type: 'config'
+      clusters:
+        - url: https://127.0.0.1:54838
+          name: minikube
+          authProvider: 'serviceAccount'
+          skipTLSVerify: true
+          skipMetricsLookup: true
+          serviceAccountToken: ${K8S_MINIKUBE_TOKEN}
+          caData: ${K8S_CONFIG_CA_DATA}
+          customResources:
+            - group: 'argoproj.io'
+              apiVersion: 'v1alpha1'
+              plural: 'rollouts'
 
 # see https://backstage.io/docs/permissions/getting-started for more on the permission framework
 permission:

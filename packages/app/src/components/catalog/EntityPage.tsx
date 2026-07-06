@@ -58,6 +58,18 @@ import {
   isKubernetesAvailable,
 } from '@backstage/plugin-kubernetes';
 
+// ADRs plugin
+import {
+  EntityAdrContent,
+  isAdrAvailable,
+} from '@backstage-community/plugin-adr';
+
+// GitHub Actions plugin
+import {
+  EntityGithubActionsContent,
+  isGithubActionsAvailable,
+} from '@backstage-community/plugin-github-actions';
+
 const techdocsContent = (
   <EntityTechdocsContent>
     <TechDocsAddons>
@@ -70,13 +82,9 @@ const cicdContent = (
   // This is an example of how you can implement your company's logic in entity page.
   // You can for example enforce that all components of type 'service' should use GitHubActions
   <EntitySwitch>
-    {/*
-      Here you can add support for different CI/CD services, for example
-      using @backstage-community/plugin-github-actions as follows:
-      <EntitySwitch.Case if={isGithubActionsAvailable}>
-        <EntityGithubActionsContent />
-      </EntitySwitch.Case>
-     */}
+    <EntitySwitch.Case if={isGithubActionsAvailable}>
+      <EntityGithubActionsContent />
+    </EntitySwitch.Case>
     <EntitySwitch.Case>
       <EmptyState
         title="No CI/CD available for this entity"
@@ -161,6 +169,10 @@ const serviceEntityPage = (
       <EntityKubernetesContent />
     </EntityLayout.Route>
 
+    <EntityLayout.Route path="/adrs" title="ADRs" if={isAdrAvailable}>
+      <EntityAdrContent />
+    </EntityLayout.Route>
+
     <EntityLayout.Route path="/api" title="API">
       <Grid container spacing={3} alignItems="stretch">
         <Grid item md={6}>
@@ -204,7 +216,7 @@ const websiteEntityPage = (
       title="Kubernetes"
       if={isKubernetesAvailable}
     >
-      <EntityKubernetesContent />
+      <EntityKubernetesContent refreshIntervalMs={30000} />
     </EntityLayout.Route>
 
     <EntityLayout.Route path="/dependencies" title="Dependencies">
@@ -221,6 +233,10 @@ const websiteEntityPage = (
     <EntityLayout.Route path="/docs" title="Docs">
       {techdocsContent}
     </EntityLayout.Route>
+
+    <EntityLayout.Route path="/adrs" title="ADRs" if={isAdrAvailable}>  {/* ← add */}
+      <EntityAdrContent />
+    </EntityLayout.Route>
   </EntityLayout>
 );
 
@@ -235,6 +251,10 @@ const defaultEntityPage = (
   <EntityLayout>
     <EntityLayout.Route path="/" title="Overview">
       {overviewContent}
+    </EntityLayout.Route>
+
+    <EntityLayout.Route path="/adrs" title="ADRs" if={isAdrAvailable}>  {/* ← add */}
+      <EntityAdrContent />
     </EntityLayout.Route>
 
     <EntityLayout.Route path="/docs" title="Docs">

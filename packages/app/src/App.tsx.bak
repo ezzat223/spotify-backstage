@@ -1,4 +1,4 @@
-import { Route } from 'react-router-dom';
+import { Navigate, Route } from 'react-router-dom';
 import { apiDocsPlugin, ApiExplorerPage } from '@backstage/plugin-api-docs';
 import {
   CatalogEntityPage,
@@ -13,6 +13,7 @@ import { ScaffolderPage, scaffolderPlugin } from '@backstage/plugin-scaffolder';
 import { orgPlugin } from '@backstage/plugin-org';
 import { SearchPage } from '@backstage/plugin-search';
 import {
+  DefaultTechDocsHome,
   TechDocsIndexPage,
   techdocsPlugin,
   TechDocsReaderPage,
@@ -37,13 +38,11 @@ import { RequirePermission } from '@backstage/plugin-permission-react';
 import { catalogEntityCreatePermission } from '@backstage/plugin-catalog-common/alpha';
 import { NotificationsPage } from '@backstage/plugin-notifications';
 import { SignalsDisplay } from '@backstage/plugin-signals';
-
+// Added by me
 // GitHub Auth
 import { githubAuthApiRef } from '@backstage/core-plugin-api';
-
 // Tech Radar Page Plugin
 import { TechRadarPage } from '@backstage-community/plugin-tech-radar';
-
 // Home Page Plugin
 import { HomepageCompositionRoot } from '@backstage/plugin-home';
 import { HomePage } from './components/home/HomePage';
@@ -88,7 +87,6 @@ const routes = (
     <Route path="/" element={<HomepageCompositionRoot />}>
       <HomePage />
     </Route>
-
     <Route path="/catalog" element={<CatalogIndexPage />} />
     <Route
       path="/catalog/:namespace/:kind/:name"
@@ -96,8 +94,8 @@ const routes = (
     >
       {entityPage}
     </Route>
-
     <Route path="/docs" element={<TechDocsIndexPage />} />
+      <DefaultTechDocsHome
     <Route
       path="/docs/:namespace/:kind/:name/*"
       element={<TechDocsReaderPage />}
@@ -106,16 +104,12 @@ const routes = (
         <ReportIssue />
       </TechDocsAddons>
     </Route>
-
     <Route path="/create" element={<ScaffolderPage />} />
-
     <Route
       path="/tech-radar"
       element={<TechRadarPage width={1500} height={800} />}
     />
-
     <Route path="/api-docs" element={<ApiExplorerPage />} />
-
     <Route
       path="/catalog-import"
       element={
@@ -124,15 +118,17 @@ const routes = (
         </RequirePermission>
       }
     />
-
     <Route path="/search" element={<SearchPage />}>
       {searchPage}
     </Route>
-
-    <Route path="/settings" element={<UserSettingsPage />} />
-
+    <Route path="/settings" element={<UserSettingsPage />}>
+      <SettingsLayout.Route path="/notifications" title="Notifications">
+      	<UserNotificationSettingsCard
+	  originNames={{ 'plugin:scaffolder': 'Scaffolder' }}
+	/>
+      </SettingsLayout.Route>
+    </Route>
     <Route path="/catalog-graph" element={<CatalogGraphPage />} />
-
     <Route path="/notifications" element={<NotificationsPage />} />
   </FlatRoutes>
 );
@@ -143,8 +139,8 @@ export default app.createRoot(
     <OAuthRequestDialog />
     <SignalsDisplay />
     <AppRouter>
+      <VisitListener />
       <Root>{routes}</Root>
     </AppRouter>
   </>,
 );
-

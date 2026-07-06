@@ -1,0 +1,12 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: demo-app
+  description: Demo nginx app running on minikube
+  annotations:
+    backstage.io/kubernetes-id: demo-app
+    backstage.io/kubernetes-namespace: default
+spec:
+  type: service
+  lifecycle: development
+  owner: xops
