@@ -138,9 +138,12 @@ ask "GitHub OAuth Client Secret" "$EXISTING_CLIENT_SECRET" true
 GITHUB_CLIENT_SECRET="$REPLY"
 
 if [[ -n "$GITHUB_CLIENT_ID" && -n "$GITHUB_CLIENT_SECRET" ]]; then
-  patch_yaml "clientId" "${GITHUB_CLIENT_ID}"
-  patch_yaml "clientSecret" "${GITHUB_CLIENT_SECRET}"
-  info "app-config.yaml updated with GitHub OAuth credentials"
+  # Store real credentials in .env (gitignored) and keep app-config.yaml using env-var references
+  set_env_var "GITHUB_CLIENT_ID" "${GITHUB_CLIENT_ID}"
+  set_env_var "GITHUB_CLIENT_SECRET" "${GITHUB_CLIENT_SECRET}"
+  patch_yaml "clientId" "\${GITHUB_CLIENT_ID}"
+  patch_yaml "clientSecret" "\${GITHUB_CLIENT_SECRET}"
+  info ".env updated with GitHub OAuth credentials (app-config.yaml uses \\${GITHUB_CLIENT_ID} and \\${GITHUB_CLIENT_SECRET})"
 else
   warn "Skipping GitHub OAuth config (no value provided and none existing)"
 fi
