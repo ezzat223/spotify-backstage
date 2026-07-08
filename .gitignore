@@ -57,3 +57,4 @@ e2e-test-report/
 
 # Temporary files created by git-filter-repo operations
 .git-filter-repo/
+\n# Allow local app config for demo branch\n!app-config.local.yaml

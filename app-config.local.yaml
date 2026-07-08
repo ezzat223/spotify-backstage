@@ -1,0 +1,11 @@
+# --- Flow pillar demo content, added 2026-07-08 ---
+# Minimal locations pointing at the demo content. These are
+# intentionally small and easy to remove if you delete the demo.
+catalog:
+  locations:
+    - type: file
+      target: ../../flow-pillar-demo/catalog
+      # --- Flow pillar demo catalog entries (flow-pillar-demo/) ---
+    - type: file
+      target: ../../flow-pillar-demo/templates
+      # --- Flow pillar demo scaffolder templates (flow-pillar-demo/) ---
