@@ -121,10 +121,14 @@ catalog:
     - type: file
       target: ../../flow-pillar-demo/catalog/all-entities.yaml
       # Flow pillar demo catalog entries (combined all-entities.yaml)
+      rules:
+        - allow: [Component, System, API, Resource, User, Group]
 
     - type: file
       target: ../../flow-pillar-demo/templates/all-templates.yaml
       # Flow pillar demo Scaffolder templates (combined all-templates.yaml)
+      rules:
+        - allow: [Template]
 
     ## Uncomment these lines to add more example data
     # - type: url
