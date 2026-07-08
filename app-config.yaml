@@ -119,12 +119,12 @@ catalog:
 
     # --- Flow pillar demo content, added 2026-07-08 ---
     - type: file
-      target: ../../flow-pillar-demo/catalog
-      # Flow pillar demo catalog entries (components, APIs, resources, users, groups)
+      target: ../../flow-pillar-demo/catalog/all-entities.yaml
+      # Flow pillar demo catalog entries (combined all-entities.yaml)
 
     - type: file
-      target: ../../flow-pillar-demo/templates
-      # Flow pillar demo Scaffolder templates (ui-visible + runnable templates)
+      target: ../../flow-pillar-demo/templates/all-templates.yaml
+      # Flow pillar demo Scaffolder templates (combined all-templates.yaml)
 
     ## Uncomment these lines to add more example data
     # - type: url

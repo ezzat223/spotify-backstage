@@ -1,0 +1,119 @@
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: flow-pillar-demo-inference-api
+  title: Flow Pillar Demo Inference API
+  description: API for model inference (demo)
+spec:
+  type: openapi
+  owner: flow-pillar
+  lifecycle: experimental
+  system: flow-pillar-demo-system
+  definition: |
+    openapi: 3.0.0
+    info:
+      title: Inference API
+      version: 0.1.0
+    paths: {}
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: flow-pillar-demo-ai-service
+  title: Flow Pillar Demo AI Service
+  description: Demo model-serving microservice for the Flow pillar
+  annotations:
+    # points TechDocs builder to local docs for this component (relative to backend working dir)
+    backstage.io/techdocs-ref: dir:../../flow-pillar-demo/catalog/flow-pillar-demo-ai-service
+spec:
+  type: service
+  lifecycle: experimental
+  owner: flow-pillar
+  providesApis:
+    - flow-pillar-demo-inference-api
+  system: flow-pillar-demo-system
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: flow-pillar-demo-model-api
+  title: Flow Pillar Demo Model API
+spec:
+  type: openapi
+  owner: flow-pillar
+  lifecycle: experimental
+  system: flow-pillar-demo-system
+  definition: |
+    openapi: 3.0.0
+    info:
+      title: Model API
+      version: 0.1.0
+    paths: {}
+---
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: flow-pillar-demo-db
+  title: Flow Pillar Demo DB (Terraform-managed)
+description: Demo resource representing a Terraform-managed DB
+spec:
+  type: terraform
+  owner: flow-pillar
+  lifecycle: experimental
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: flow-pillar-demo-web
+  title: Flow Pillar Demo Website
+  description: User-facing website (software-only example)
+  annotations:
+    backstage.io/techdocs-ref: dir:../../flow-pillar-demo/catalog/flow-pillar-demo-web
+spec:
+  type: website
+  lifecycle: experimental
+  owner: flow-pillar
+  system: flow-pillar-demo-system
+---
+apiVersion: backstage.io/v1alpha1
+kind: Group
+metadata:
+  name: flow-pillar
+  title: Flow Pillar
+spec:
+  type: team
+  members:
+    - demo-user
+---
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: flow-pillar-demo-system
+  title: Flow Pillar Demo System
+spec:
+  owner: flow-pillar
+  domain: flow-pillar
+  lifecycle: experimental
+---
+apiVersion: backstage.io/v1alpha1
+kind: User
+metadata:
+  name: demo-user
+  title: Demo User
+spec:
+  profile:
+    displayName: Demo User
+    email: demo@example.com
+---
+apiVersion: backstage.io/v1alpha1
+kind: User
+metadata:
+  name: ezzat223
+  title: Ezzat
+spec:
+  profile:
+    displayName: Ezzat
+    email: ezzat223@example.com
+  memberOf:
+    - group:flow-pillar
