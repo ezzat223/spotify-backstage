@@ -18,12 +18,14 @@ spec:
           description:
             type: string
   steps:
-    - id: publish
-      name: Create GitHub repository
-      action: github:publish
+    - id: dispatch_generator
+      name: Dispatch platform-template-generator workflow
+      action: github:workflow-dispatch
       input:
-        owner: ezzat223
-        repo: "{{ parameters.name }}"
-        description: "Scaffolded by Flow Pillar demo: Software-only"
-        visibility: public
-        readmeContents: "# {{ parameters.name }}\nScaffolded project"
+        owner: Finaira1
+        repo: platform-template-generator
+        workflow_id: generate_repo.yaml
+        ref: main
+        inputs:
+          project_name: "{{ parameters.name }}"
+          project_type: "Software only"
