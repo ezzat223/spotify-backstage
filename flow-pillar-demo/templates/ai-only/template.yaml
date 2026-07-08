@@ -1,0 +1,33 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: flow-pillar-ai-only
+  title: Flow Pillar — AI-only
+  description: Scaffold an AI-only project (model serving)
+  tags:
+    - flow-pillar
+spec:
+  owner: flow-pillar
+  parameters:
+    - title: Project details
+      required: true
+      schema:
+        type: object
+        properties:
+          name:
+            title: Project name
+            type: string
+          description:
+            type: string
+  steps:
+    - id: publish
+      name: Create GitHub repository and push initial files
+      action: github:publish
+      input:
+        owner: ezzat223
+        repo: "{{ parameters.name }}"
+        description: "Scaffolded by Flow Pillar demo: AI-only"
+        visibility: public
+        readmeContents: |
+          # {{ parameters.name }}
+          Scaffolded AI-only project

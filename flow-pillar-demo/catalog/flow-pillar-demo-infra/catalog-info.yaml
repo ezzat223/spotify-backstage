@@ -1,0 +1,10 @@
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: flow-pillar-demo-db
+  title: Flow Pillar Demo DB (Terraform-managed)
+description: Demo resource representing a Terraform-managed DB
+spec:
+  type: terraform
+  owner: flow-pillar
+  lifecycle: experimental

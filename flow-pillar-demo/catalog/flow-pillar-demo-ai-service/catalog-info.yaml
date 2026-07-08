@@ -1,0 +1,16 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: flow-pillar-demo-ai-service
+  title: Flow Pillar Demo AI Service
+  description: Demo model-serving microservice for the Flow pillar
+  annotations:
+    # points TechDocs builder to local docs for this component (relative to backend working dir)
+    backstage.io/techdocs-ref: dir:../../flow-pillar-demo/catalog/flow-pillar-demo-ai-service
+spec:
+  type: service
+  lifecycle: experimental
+  owner: flow-pillar
+  providesApis:
+    - flow-pillar-demo-inference-api
+  system: flow-pillar-demo-system

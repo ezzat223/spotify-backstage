@@ -1,0 +1,29 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: flow-pillar-software-only
+  title: Flow Pillar — Software-only
+  description: Scaffold a software-only project (library or website)
+  tags: [flow-pillar]
+spec:
+  owner: flow-pillar
+  parameters:
+    - title: Project details
+      required: true
+      schema:
+        type: object
+        properties:
+          name:
+            type: string
+          description:
+            type: string
+  steps:
+    - id: publish
+      name: Create GitHub repository
+      action: github:publish
+      input:
+        owner: ezzat223
+        repo: "{{ parameters.name }}"
+        description: "Scaffolded by Flow Pillar demo: Software-only"
+        visibility: public
+        readmeContents: "# {{ parameters.name }}\nScaffolded project"

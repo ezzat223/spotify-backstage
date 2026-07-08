@@ -1,0 +1,13 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: flow-pillar-demo-web
+  title: Flow Pillar Demo Website
+  description: User-facing website (software-only example)
+  annotations:
+    backstage.io/techdocs-ref: dir:../../flow-pillar-demo/catalog/flow-pillar-demo-web
+spec:
+  type: website
+  lifecycle: experimental
+  owner: flow-pillar
+  system: flow-pillar-demo-system

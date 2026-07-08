@@ -1,0 +1,9 @@
+apiVersion: backstage.io/v1alpha1
+kind: Group
+metadata:
+  name: flow-pillar
+  title: Flow Pillar
+spec:
+  type: team
+  members:
+    - demo-user

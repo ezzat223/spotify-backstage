@@ -1,0 +1,28 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: flow-pillar-ai-and-software
+  title: Flow Pillar — AI + Software
+  description: Scaffold a combined AI + software repo (model + service)
+spec:
+  owner: flow-pillar
+  parameters:
+    - title: Project
+      required: true
+      schema:
+        type: object
+        properties:
+          name:
+            type: string
+          description:
+            type: string
+  steps:
+    - id: publish
+      name: Create GitHub repository
+      action: github:publish
+      input:
+        owner: ezzat223
+        repo: "{{ parameters.name }}"
+        description: "Scaffolded by Flow Pillar demo: AI+Software"
+        visibility: public
+        readmeContents: "# {{ parameters.name }}\nAI + Software scaffold"

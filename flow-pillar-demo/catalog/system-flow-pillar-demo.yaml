@@ -1,0 +1,9 @@
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: flow-pillar-demo-system
+  title: Flow Pillar Demo System
+spec:
+  owner: flow-pillar
+  domain: flow-pillar
+  lifecycle: experimental
