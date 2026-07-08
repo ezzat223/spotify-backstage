@@ -117,6 +117,15 @@ catalog:
       rules:
         - allow: [User, Group]
 
+    # --- Flow pillar demo content, added 2026-07-08 ---
+    - type: file
+      target: ../../flow-pillar-demo/catalog
+      # Flow pillar demo catalog entries (components, APIs, resources, users, groups)
+
+    - type: file
+      target: ../../flow-pillar-demo/templates
+      # Flow pillar demo Scaffolder templates (ui-visible + runnable templates)
+
     ## Uncomment these lines to add more example data
     # - type: url
     #   target: https://github.com/backstage/backstage/blob/master/packages/catalog-model/examples/all.yaml
