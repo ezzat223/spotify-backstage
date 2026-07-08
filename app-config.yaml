@@ -48,8 +48,7 @@ integrations:
     - host: github.com
       # This is a Personal Access Token or PAT from GitHub. You can find out how to generate this token, and more information
       # about setting up the GitHub integration here: https://backstage.io/docs/integrations/github/locations#configuration
-      token: REDACTED_TOKEN
-      #  token: ${GITHUB_TOKEN}
+      token: ${GITHUB_TOKEN}
     ### Example for how to add your GitHub Enterprise instance using the API:
     # - host: ghe.example.net
     #   apiBaseUrl: https://ghe.example.net/api/v3
@@ -83,7 +82,7 @@ auth:
     github:
       development:
         clientId: Ov23liJHUEZF1Q3AavU3
-        clientSecret: 95140e2f5df6fe6174205011fda6c0637a9ba9f3
+        clientSecret: ba38e24f532276c765970f9a3187b0f44fd4ef08
         signIn:
           resolvers:
             - resolver: usernameMatchingUserEntityName
@@ -137,12 +136,14 @@ kubernetes:
   clusterLocatorMethods:
     - type: 'config'
       clusters:
-        - url: https://127.0.0.1:54838
+        - url: https://127.0.0.1:62708
           name: minikube
           authProvider: 'serviceAccount'
           skipTLSVerify: true
           skipMetricsLookup: true
           serviceAccountToken: ${K8S_MINIKUBE_TOKEN}
+          dashboardUrl: http://127.0.0.1:41261        # url copied from running the command: minikube service kubernetes-dashboard -n kubernetes-dashboard
+          dashboardApp: standard
           caData: ${K8S_CONFIG_CA_DATA}
           customResources:
             - group: 'argoproj.io'

@@ -1,0 +1,123 @@
+# ============================================================================
+# demo-app — Argo Rollouts (canary) variant
+# ============================================================================
+#
+# Replaces the standard Deployment with an Argo Rollout that gradually shifts
+# traffic to a new image version (canary strategy).
+#
+# ── Prerequisites ───────────────────────────────────────────────────────────
+#
+#   Argo Rollouts must be installed (done automatically by setup-backstage-k8s.sh).
+#   Install the kubectl plugin to manage rollouts from the CLI:
+#
+#     # macOS / Linux
+#     curl -LO https://github.com/argoproj/argo-rollouts/releases/latest/download/kubectl-argo-rollouts-linux-amd64
+#     chmod +x kubectl-argo-rollouts-linux-amd64
+#     sudo mv kubectl-argo-rollouts-linux-amd64 /usr/local/bin/kubectl-argo-rollouts
+#
+# ── Switching from the plain Deployment ─────────────────────────────────────
+#
+#   If you already deployed k8s/demo-app.yaml, delete the Deployment first
+#   (the Service can stay — it's shared between both files):
+#
+#     kubectl delete deployment demo-app
+#
+# ── Deploy ───────────────────────────────────────────────────────────────────
+#
+#     kubectl apply -f k8s/demo-app-rollout.yaml
+#
+# ── Watch the rollout live ───────────────────────────────────────────────────
+#
+#     kubectl argo rollouts get rollout demo-app --watch
+#
+# ── Trigger a canary rollout (update image) ──────────────────────────────────
+#
+#     kubectl argo rollouts set image demo-app http-echo=hashicorp/http-echo:1.0.0
+#     kubectl argo rollouts get rollout demo-app --watch
+#
+#   The rollout will pause at 20% waiting for manual approval (see steps below).
+#
+# ── Promote (send 100% traffic to new version) ───────────────────────────────
+#
+#     kubectl argo rollouts promote demo-app
+#
+# ── Abort and roll back ───────────────────────────────────────────────────────
+#
+#     kubectl argo rollouts abort demo-app
+#
+# ── Check in Backstage ───────────────────────────────────────────────────────
+#
+#   Backstage → Catalog → demo-app → Kubernetes tab.
+#   You will see a "Rollout" card instead of a "Deployment" card, showing
+#   canary weight, current/stable replica sets, and rollout status.
+#
+# ============================================================================
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: demo-app
+  namespace: default
+  labels:
+    app.kubernetes.io/name: demo-app
+    backstage.io/kubernetes-id: demo-app
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: demo-app
+      backstage.io/kubernetes-id: demo-app
+
+  strategy:
+    canary:
+      steps:
+        - setWeight: 20       # step 1: send 20% of traffic to the new version
+        - pause: {}           # step 2: wait for manual promotion (or set a duration: {duration: 60s})
+        - setWeight: 60       # step 3: send 60%
+        - pause: {duration: 30s}  # step 4: auto-continue after 30 seconds
+        - setWeight: 100      # step 5: fully promote
+
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: demo-app
+        backstage.io/kubernetes-id: demo-app
+    spec:
+      containers:
+        - name: http-echo
+          image: hashicorp/http-echo:1.0.0
+          args:
+            - "-listen=:8080"
+            - "-text=demo-app"
+          ports:
+            - containerPort: 8080
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "32Mi"
+            limits:
+              cpu: "200m"
+              memory: "64Mi"
+
+---
+# The Service is identical to the one in demo-app.yaml.
+# Skip this if you already applied demo-app.yaml.
+apiVersion: v1
+kind: Service
+metadata:
+  name: demo-app
+  namespace: default
+  labels:
+    app.kubernetes.io/name: demo-app
+    backstage.io/kubernetes-id: demo-app
+spec:
+  selector:
+    app.kubernetes.io/name: demo-app
+    backstage.io/kubernetes-id: demo-app
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 8080
+  type: ClusterIP

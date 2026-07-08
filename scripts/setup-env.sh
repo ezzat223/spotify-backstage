@@ -1,18 +1,112 @@
 #!/usr/bin/env bash
 # setup-env.sh — Interactive setup for the Finaira Backstage .env file.
-# Configures GitHub OAuth credentials in app-config.yaml and the
-# Kubernetes service-account token / CA data in .env (for K8s plugin).
+# Configures GitHub OAuth credentials in app-config.yaml and writes
+# GITHUB_TOKEN + Kubernetes credentials to .env.
+# Re-running is safe: existing values are shown and can be kept as-is.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
 GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'
-BOLD='\033[1m'; NC='\033[0m'
-info()   { echo -e "${GREEN}➜${NC}  $*"; }
-prompt() { echo -e "${CYAN}?${NC}  $*"; }
-warn()   { echo -e "${YELLOW}⚠${NC}  $*"; }
+DIM='\033[2m'; BOLD='\033[1m'; NC='\033[0m'
+info() { echo -e "${GREEN}➜${NC}  $*"; }
+warn() { echo -e "${YELLOW}⚠${NC}  $*"; }
 
+# ── Safely add or update a single key in .env (never clobbers other keys) ───
+# Uses Python instead of sed -i to work reliably on WSL /mnt/c/ paths.
+set_env_var() {
+  local key="$1" val="$2" file="${REPO_ROOT}/.env"
+  if [[ -f "$file" ]] && grep -q "^${key}=" "$file" 2>/dev/null; then
+    python3 - "$key" "$val" "$file" << 'PY'
+import sys
+key, val, fname = sys.argv[1], sys.argv[2], sys.argv[3]
+with open(fname, 'r') as f:
+    lines = f.readlines()
+with open(fname, 'w') as f:
+    for line in lines:
+        f.write((key + '=' + val + '\n') if line.startswith(key + '=') else line)
+PY
+  else
+    echo "${key}=${val}" >> "$file"
+  fi
+}
+
+# ── Patch a YAML key's value in app-config.yaml (WSL-safe via Python) ────────
+patch_yaml() {
+  local key="$1" val="$2"
+  python3 - "$key" "$val" app-config.yaml << 'PY'
+import sys, re
+key, val, fname = sys.argv[1], sys.argv[2], sys.argv[3]
+with open(fname, 'r') as f:
+    content = f.read()
+pattern = r'^(\s+' + re.escape(key) + r':).*$'
+new_content = re.sub(pattern, lambda m: m.group(1) + ' ' + val, content, count=1, flags=re.MULTILINE)
+with open(fname, 'w') as f:
+    f.write(new_content)
+PY
+}
+
+# ── Read a YAML scalar value; returns empty for placeholders / masked values ─
+get_yaml_value() {
+  local key="$1" raw
+  raw=$(grep -m1 "^[[:space:]]*${key}:" app-config.yaml 2>/dev/null \
+        | sed "s/.*${key}:[[:space:]]*//" | tr -d '\r\n' || true)
+  # Treat all-asterisk strings, ${VAR} placeholders, or empty as "not set"
+  if [[ -z "$raw" ]] || [[ "$raw" =~ ^\*+$ ]] || [[ "$raw" =~ ^\$\{ ]]; then
+    echo ""
+  else
+    echo "$raw"
+  fi
+}
+
+# ── Read a value from .env; returns empty for placeholders ──────────────────
+get_env_value() {
+  local key="$1" val
+  val=$(grep "^${key}=" "${REPO_ROOT}/.env" 2>/dev/null | cut -d'=' -f2- | tr -d '\r\n' || true)
+  # Treat all-asterisk or ${VAR} values as "not set"
+  if [[ -z "$val" ]] || [[ "$val" =~ ^\*+$ ]] || [[ "$val" =~ ^\$\{ ]]; then
+    echo ""
+  else
+    echo "$val"
+  fi
+}
+
+# ── Mask a secret: first 4 chars + **** ─────────────────────────────────────
+mask() {
+  local val="$1" len="${#1}"
+  if   [[ $len -eq 0 ]]; then echo ""
+  elif [[ $len -le 6 ]]; then echo "****"
+  else echo "${val:0:4}****"
+  fi
+}
+
+# ── Interactive prompt with optional "keep existing" hint ───────────────────
+# Sets global REPLY to the entered value or the existing value if Enter pressed.
+REPLY=""
+ask() {
+  local label="$1" existing="$2" is_secret="${3:-false}"
+  if [[ -n "$existing" ]]; then
+    echo -e "${DIM}  Current: $(mask "$existing") (press Enter to keep)${NC}"
+    echo -ne "${CYAN}?${NC}  ${label} [Enter to keep]: "
+  else
+    echo -ne "${CYAN}?${NC}  ${label}: "
+  fi
+
+  if [[ "$is_secret" == "true" ]]; then
+    read -rs REPLY || true
+    echo ""   # newline after silent input
+  else
+    read -r REPLY || true
+  fi
+
+  # Empty input → fall back to existing value
+  if [[ -z "$REPLY" && -n "$existing" ]]; then
+    REPLY="$existing"
+  fi
+}
+
+# ── Banner ───────────────────────────────────────────────────────────────────
 echo ""
 echo "╔══════════════════════════════════════════╗"
 echo "║  Finaira Backstage — Environment Setup   ║"
@@ -23,6 +117,8 @@ echo "  1. GitHub OAuth App  (required — for sign-in)"
 echo "  2. GitHub PAT        (required — for catalog/scaffolder integration)"
 echo "  3. Kubernetes token  (optional — for K8s plugin)"
 echo ""
+echo "Press Enter on any field to keep its existing value."
+echo ""
 
 # ── 1. GitHub OAuth App ──────────────────────────────────────────────────────
 echo -e "${BOLD}── GitHub OAuth App ────────────────────────────────────────────────${NC}"
@@ -32,23 +128,21 @@ echo "  Homepage URL              : http://localhost:3000"
 echo "  Authorization callback URL: http://localhost:7007/api/auth/github/handler/frame"
 echo ""
 
-prompt "GitHub OAuth Client ID:"
-read -r GITHUB_CLIENT_ID
+EXISTING_CLIENT_ID=$(get_yaml_value "clientId")
+EXISTING_CLIENT_SECRET=$(get_yaml_value "clientSecret")
 
-prompt "GitHub OAuth Client Secret:"
-read -rs GITHUB_CLIENT_SECRET
-echo ""
+ask "GitHub OAuth Client ID" "$EXISTING_CLIENT_ID" false
+GITHUB_CLIENT_ID="$REPLY"
 
-# Patch app-config.yaml with the OAuth credentials
+ask "GitHub OAuth Client Secret" "$EXISTING_CLIENT_SECRET" true
+GITHUB_CLIENT_SECRET="$REPLY"
+
 if [[ -n "$GITHUB_CLIENT_ID" && -n "$GITHUB_CLIENT_SECRET" ]]; then
-  # Use sed to replace inline values (handles both literal and ${VAR} formats)
-  sed -i \
-    -e "s|clientId:.*|clientId: ${GITHUB_CLIENT_ID}|" \
-    -e "s|clientSecret:.*|clientSecret: ${GITHUB_CLIENT_SECRET}|" \
-    app-config.yaml
+  patch_yaml "clientId" "${GITHUB_CLIENT_ID}"
+  patch_yaml "clientSecret" "${GITHUB_CLIENT_SECRET}"
   info "app-config.yaml updated with GitHub OAuth credentials"
 else
-  warn "Skipping GitHub OAuth config (empty input)"
+  warn "Skipping GitHub OAuth config (no value provided and none existing)"
 fi
 
 echo ""
@@ -60,20 +154,22 @@ echo "Create a PAT at: https://github.com/settings/tokens"
 echo "Required scopes: repo, read:org, read:user"
 echo ""
 
-prompt "GitHub PAT (leave blank to skip):"
-read -rs GITHUB_TOKEN
-echo ""
+# Prefer .env value; fall back to app-config.yaml token line
+EXISTING_PAT=$(get_env_value "GITHUB_TOKEN")
+if [[ -z "$EXISTING_PAT" ]]; then
+  EXISTING_PAT=$(get_yaml_value "token")
+fi
 
-ENV_CONTENT=""
+ask "GitHub PAT" "$EXISTING_PAT" true
+GITHUB_TOKEN="$REPLY"
 
 if [[ -n "$GITHUB_TOKEN" ]]; then
-  # Replace the token line in app-config.yaml
-  sed -i "s|token: \*\*\*\*\*\*|token: ${GITHUB_TOKEN}|g" app-config.yaml
-  sed -i "s|#  token: \${GITHUB_TOKEN}|  token: \${GITHUB_TOKEN}|g" app-config.yaml
-  ENV_CONTENT+="GITHUB_TOKEN=${GITHUB_TOKEN}\n"
-  info "app-config.yaml updated with GitHub PAT"
+  # Keep app-config.yaml using ${GITHUB_TOKEN} env-var reference; write real value to .env
+  patch_yaml "token" "\${GITHUB_TOKEN}"
+  set_env_var "GITHUB_TOKEN" "${GITHUB_TOKEN}"
+  info ".env updated with GitHub PAT (app-config.yaml uses \${GITHUB_TOKEN})"
 else
-  warn "Skipping GitHub PAT config"
+  warn "Skipping GitHub PAT config (no value provided and none existing)"
 fi
 
 echo ""
@@ -82,43 +178,98 @@ echo ""
 echo -e "${BOLD}── Kubernetes Integration (optional) ──────────────────────────────${NC}"
 echo ""
 
-prompt "Configure Kubernetes integration? [y/N]"
-read -r CONFIGURE_K8S
+EXISTING_K8S_TOKEN=$(get_env_value "K8S_MINIKUBE_TOKEN")
+EXISTING_K8S_CA=$(get_env_value "K8S_CONFIG_CA_DATA")
+if [[ -n "$EXISTING_K8S_TOKEN" && -n "$EXISTING_K8S_CA" ]]; then
+  echo -e "${DIM}  Existing K8s credentials found in .env (token: $(mask "$EXISTING_K8S_TOKEN"), CA: set)${NC}"
+  echo ""
+fi
+
+echo -ne "${CYAN}?${NC}  Configure Kubernetes integration? [y/N]: "
+read -r CONFIGURE_K8S || true
 
 if [[ "$CONFIGURE_K8S" =~ ^[Yy]$ ]]; then
   echo ""
-  echo "To generate K8s credentials automatically, run:"
-  echo "  ./setup-backstage-k8s.sh"
+  echo "How would you like to configure Kubernetes credentials?"
   echo ""
-  echo "Or enter values manually:"
+  echo "  1) Auto-generate using Minikube (recommended)"
+  echo "     Starts Minikube if needed, creates service account, extracts"
+  echo "     token + CA data, and patches app-config.yaml automatically."
   echo ""
-  prompt "K8S_MINIKUBE_TOKEN (base64 bearer token, leave blank to skip):"
-  read -rs K8S_TOKEN
+  echo "  2) Enter token and CA data manually"
+  echo "     Use this if you have an existing cluster or already ran"
+  echo "     setup-backstage-k8s.sh."
   echo ""
-  prompt "K8S_CONFIG_CA_DATA (base64 CA cert, leave blank to skip):"
-  read -rs K8S_CA
+  echo "  3) Keep existing / skip"
   echo ""
+  echo -ne "${CYAN}?${NC}  Choice [1/2/3]: "
+  read -r K8S_CHOICE || true
 
-  if [[ -n "$K8S_TOKEN" && -n "$K8S_CA" ]]; then
-    ENV_CONTENT+="K8S_MINIKUBE_TOKEN=${K8S_TOKEN}\nK8S_CONFIG_CA_DATA=${K8S_CA}\n"
-    info "K8s credentials will be written to .env"
-  else
-    warn "Skipping K8s credentials"
-  fi
+  case "$K8S_CHOICE" in
+    1)
+      echo ""
+      echo -e "${BOLD}── Running Kubernetes auto-setup ───────────────────────────────────${NC}"
+      echo ""
+
+      if ! command -v minikube &>/dev/null; then
+        warn "minikube not found."
+        echo ""
+        echo "  Install minikube: https://minikube.sigs.k8s.io/docs/start/"
+        echo ""
+        echo "  If you have another Kubernetes cluster already running and"
+        echo "  configured in kubectl, the setup script can still work with"
+        echo "  the --no-minikube flag."
+        echo ""
+        echo -ne "${CYAN}?${NC}  Continue without minikube (use current kubectl context)? [y/N]: "
+        read -r CONTINUE_NO_MINIKUBE || true
+        if [[ "$CONTINUE_NO_MINIKUBE" =~ ^[Yy]$ ]]; then
+          bash "${REPO_ROOT}/setup-backstage-k8s.sh" --no-minikube
+        else
+          warn "Skipping Kubernetes setup"
+        fi
+      else
+        bash "${REPO_ROOT}/setup-backstage-k8s.sh"
+      fi
+      ;;
+
+    2)
+      echo ""
+      ask "K8S_MINIKUBE_TOKEN (bearer token)" "$EXISTING_K8S_TOKEN" true
+      K8S_TOKEN="$REPLY"
+
+      ask "K8S_CONFIG_CA_DATA (base64 CA cert)" "$EXISTING_K8S_CA" true
+      K8S_CA="$REPLY"
+
+      EXISTING_K8S_URL=$(grep -m1 "^[[:space:]]*- url:" app-config.yaml 2>/dev/null \
+        | sed 's/.*- url:[[:space:]]*//' | tr -d '\r\n' || true)
+      ask "Cluster API URL" "$EXISTING_K8S_URL" false
+      K8S_URL="$REPLY"
+
+      if [[ -n "$K8S_TOKEN" && -n "$K8S_CA" ]]; then
+        set_env_var "K8S_MINIKUBE_TOKEN" "${K8S_TOKEN}"
+        set_env_var "K8S_CONFIG_CA_DATA" "${K8S_CA}"
+        info ".env updated with K8s credentials"
+      else
+        warn "Skipping K8s credentials (token or CA is empty)"
+      fi
+
+      if [[ -n "$K8S_URL" ]]; then
+        patch_yaml "- url" "${K8S_URL}"
+        info "app-config.yaml updated with cluster URL: ${K8S_URL}"
+      fi
+      ;;
+
+    *)
+      if [[ -n "$EXISTING_K8S_TOKEN" ]]; then
+        info "Keeping existing K8s credentials"
+      else
+        warn "Skipping Kubernetes setup"
+      fi
+      ;;
+  esac
 fi
 
-# ── 4. Write .env ─────────────────────────────────────────────────────────────
-if [[ -n "$ENV_CONTENT" ]]; then
-  echo ""
-  if [[ -f ".env" ]]; then
-    warn ".env already exists — backing up to .env.bak"
-    cp .env .env.bak
-  fi
-  printf "%b" "$ENV_CONTENT" > .env
-  info ".env written"
-fi
-
-# ── 5. Next steps ─────────────────────────────────────────────────────────────
+# ── 4. Next steps ─────────────────────────────────────────────────────────────
 echo ""
 echo "╔══════════════════════════════════════════╗"
 echo "║  Setup complete! Next steps:             ║"
@@ -130,3 +281,5 @@ echo "║  2. Open the app:                        ║"
 echo "║     http://localhost:3000                ║"
 echo "╚══════════════════════════════════════════╝"
 echo ""
+
+exit 0
