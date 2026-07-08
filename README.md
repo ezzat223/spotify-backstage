@@ -187,6 +187,12 @@ yarn prettier:check
 
 Runs the full host-build pipeline (`install → tsc → build:backend`) and produces a `backstage` Docker image.
 
+Note: the built image expects a PostgreSQL database at runtime. Start the local Postgres service defined in `docker-compose.yml` before running the image:
+
+```sh
+docker compose up -d
+```
+
 Override the tag: `IMAGE_TAG=my-tag ./scripts/build-image.sh`
 
 ### Manual build

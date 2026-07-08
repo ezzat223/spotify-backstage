@@ -29,6 +29,14 @@ for cmd in node yarn docker; do
   fi
 done
 
+# ── 1.1 Check for a running Postgres container (helpful when running the image)
+# Note: building the image does not require Postgres, but running it locally does.
+# If no Postgres container derived from the expected image is found, print guidance.
+if ! docker ps --filter ancestor=postgres:18-trixie --format '{{.ID}}' | grep -q .; then
+  warn "No running Postgres container detected. The built image needs a Postgres DB at runtime."
+  warn "Start it with: docker compose up -d (uses docker-compose.yml service 'postgres')"
+fi
+
 # ── 2. Install dependencies ──────────────────────────────────────────────────
 info "Installing dependencies (immutable)…"
 yarn install --immutable

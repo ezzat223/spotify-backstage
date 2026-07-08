@@ -81,8 +81,8 @@ auth:
     # See https://backstage.io/docs/auth/guest/provider
     github:
       development:
-        clientId: Ov23liJHUEZF1Q3AavU3
-        clientSecret: ba38e24f532276c765970f9a3187b0f44fd4ef08
+        clientId: ${GITHUB_CLIENT_ID}
+        clientSecret: ${GITHUB_CLIENT_SECRET}
         signIn:
           resolvers:
             - resolver: usernameMatchingUserEntityName
@@ -136,13 +136,13 @@ kubernetes:
   clusterLocatorMethods:
     - type: 'config'
       clusters:
-        - url: https://127.0.0.1:62708
+        - url: https://127.0.0.1:63281
           name: minikube
           authProvider: 'serviceAccount'
           skipTLSVerify: true
           skipMetricsLookup: true
           serviceAccountToken: ${K8S_MINIKUBE_TOKEN}
-          dashboardUrl: http://127.0.0.1:41261        # url copied from running the command: minikube service kubernetes-dashboard -n kubernetes-dashboard
+          dashboardUrl: http://127.0.0.1:41781
           dashboardApp: standard
           caData: ${K8S_CONFIG_CA_DATA}
           customResources:
